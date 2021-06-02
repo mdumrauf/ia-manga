@@ -1,29 +1,20 @@
 const fs = require('fs');
-
-const population = {
-    missionaries: 3,
-    cannibals: 3,
-};
-
-const bankLeft = population;
-
-const bankRight = {
-    missionaries: 0,
-    cannibals: 0,
-};
+const logFileDate = new Date().toISOString().replace(/T/, ' ').replace(/:/g, '-').replace(/\..+/, '').replace(' ', '_');
 
 function logInfo(text) {
-    fs.appendFileSync('info.log', text + '\n');
+    text.date = new Date().toISOString();
+    fs.appendFileSync(`${logFileDate}-info.log`, JSON.stringify(text) + ',\n');
 }
 
 function logError(text) {
-    fs.appendFileSync('error.log', text + '\n');
+    text.date = new Date().toISOString();
+    fs.appendFileSync(`${logFileDate}-error.log`, JSON.stringify(text) + ',\n');
 }
 
 function createPopulation() {
     const population = [];
 
-    for (let i = 0; i < 10; i++) {    
+    for (let i = 0; i < 1000; i++) {
         const elem = {
             individualsRightBank: 0,
             numberOfMovements: 0,
@@ -65,7 +56,8 @@ function createPopulation() {
                                 bankToDecrement.missionaries--;
                                 bankToIncrement.missionaries++;
                             } else {
-                                logError('Try to move 2, but there are no more missionaries to move. Continue to next round.');
+                                logError({ error: 'Try to move 2, but there are no more missionaries to move. Continue to next round.',
+                                    population, elem, boatPosition, bankLeft, bankRight});
                                 // Cancel the movement
                                 bankToDecrement.missionaries++;
                                 bankToIncrement.missionaries--;
@@ -80,7 +72,8 @@ function createPopulation() {
                                 bankToDecrement.cannibals--;
                                 bankToIncrement.cannibals++;
                             } else {
-                                logError('Tried to move 1 cannibal with 1 missionary, but there are no cannibals to move. Continue to next round.');
+                                logError({ error: 'Tried to move 1 cannibal with 1 missionary, but there are no cannibals to move. Continue to next round.',
+                                    population, elem, boatPosition, bankLeft, bankRight});
                                 // Cancel the movement
                                 bankToDecrement.missionaries++;
                                 bankToIncrement.missionaries--;
@@ -91,7 +84,8 @@ function createPopulation() {
                         }
                     }
                 } else {
-                    logError('Tried to move 1, but there are no missionaries to move. Continue to next round.');
+                    logError({ error: 'Tried to move 1, but there are no missionaries to move. Continue to next round.',
+                        population, elem, boatPosition, bankLeft, bankRight});
                     // xor boatPosition to invalidate movement
                     boatPosition ^= 1;
                 }
@@ -111,7 +105,8 @@ function createPopulation() {
                                 bankToDecrement.missionaries--;
                                 bankToIncrement.missionaries++;
                             } else {
-                                logError('Tried to move 1 cannibal with 1 missionary, but there are no cannibals to move. Continue to next round.');
+                                logError({ error: 'Tried to move 1 cannibal with 1 missionary, but there are no cannibals to move. Continue to next round.',
+                                    population, elem, boatPosition, bankLeft, bankRight});
                                 // Cancel the movement
                                 bankToDecrement.cannibals++;
                                 bankToIncrement.cannibals--;
@@ -126,7 +121,8 @@ function createPopulation() {
                                 bankToDecrement.cannibals--;
                                 bankToIncrement.cannibals++;
                             } else {
-                                logError('Try to move 2, but there are no more cannibals to move. Continue to next round.');
+                                logError({ error: 'Try to move 2, but there are no more cannibals to move. Continue to next round.',
+                                    population, elem, boatPosition, bankLeft, bankRight});
                                 // Cancel the movement
                                 bankToDecrement.cannibals++;
                                 bankToIncrement.cannibals--;
@@ -137,7 +133,8 @@ function createPopulation() {
                         }
                     }
                 } else {
-                    logError('Tried to move 1, but there are no cannibals to move. Continue to next round.');
+                    logError({ error: 'Tried to move 1, but there are no cannibals to move. Continue to next round.',
+                        population, elem, boatPosition, bankLeft, bankRight });
                     // xor boatPosition to invalidate movement
                     boatPosition ^= 1;
                 }
@@ -183,7 +180,7 @@ function applyFitness(elem) {
 }
 
 function log(population, fitnessRate) {
-    logInfo(JSON.stringify({population, fitnessRate}));
+    logInfo({population, fitnessRate});
 }
 
 function main() {
@@ -200,6 +197,10 @@ function main() {
             const elem = population[i];
             const bestFitness = applyFitness(elem);
             log(elem, bestFitness);
+
+            if (elem.eatenByCannibals === 0) {
+                console.log('I WON, BITCHES!', elem);
+            }
         }
     }
 }
