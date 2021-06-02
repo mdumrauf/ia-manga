@@ -11,6 +11,9 @@ function logError(text) {
     fs.appendFileSync(`${logFileDate}-error.log`, JSON.stringify(text) + ',\n');
 }
 
+const INDIVIDUAL_SELECTION_RATE = 0.5;
+const NUMBERS_TO_MOVE_RATE = 0.4;
+
 function createPopulation() {
     const population = [];
 
@@ -35,12 +38,12 @@ function createPopulation() {
 
         while (elem.eatenByCannibals === 0 && elem.individualsRightBank <= 6) {
             // Calculate number of individuals to move based on probability
-            const numberToMove = Math.random() >= 0.4 ? 2 : 1;
+            const numberToMove = Math.random() >= NUMBERS_TO_MOVE_RATE ? 2 : 1;
 
             const bankToDecrement = boatPosition === 1 ? bankLeft : bankRight;
             const bankToIncrement = boatPosition === 0 ? bankLeft : bankRight;
 
-            if (Math.random() >= 0.5) {
+            if (Math.random() >= INDIVIDUAL_SELECTION_RATE) {
 
                 // Validate there are missionaries to move.
                 if (bankToDecrement.missionaries >= 1) {
@@ -49,7 +52,7 @@ function createPopulation() {
                     bankToIncrement.missionaries++;
 
                     if (numberToMove === 2) {
-                        if (Math.random() >= 0.5) {
+                        if (Math.random() >= INDIVIDUAL_SELECTION_RATE) {
                             // Validate there are missionaries to move.
                             if (bankToDecrement.missionaries >= 1) {
                                 // Move missionaries
@@ -98,7 +101,7 @@ function createPopulation() {
                     bankToIncrement.cannibals++;                
         
                     if (numberToMove === 2) {
-                        if (Math.random() >= 0.5) {
+                        if (Math.random() >= INDIVIDUAL_SELECTION_RATE) {
                             // Validate there are missionaries to move.
                             if (bankToDecrement.missionaries >= 1) {
                                 // Move missionaries
