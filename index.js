@@ -1,4 +1,6 @@
 const fs = require('fs');
+const _ = require('lodash');
+
 const logFileDate = new Date().toISOString().replace(/T/, ' ').replace(/:/g, '-').replace(/\..+/, '').replace(' ', '_');
 
 const LOG_ERRORS = false;
@@ -7,12 +9,19 @@ const LOG_INFO = false;
 const INDIVIDUAL_SELECTION_RATE = 0.5;
 const NUMBERS_TO_MOVE_RATE = 0.4;
 
-CONST GENERATIONAL_JUMP = 0.5;
+const GENERATIONAL_JUMP = 0.5;
+
+const MUTATION_PROBABILITY = 0.05;
+
 
 
 function logInfo(text) {
     text.date = new Date().toISOString();
     LOG_INFO && fs.appendFileSync(`${logFileDate}-info.log`, JSON.stringify(text) + ',\n');
+}
+
+function logSelect(text) {
+    fs.appendFileSync(`${logFileDate}-select.log`, JSON.stringify(text) + ',\n');
 }
 
 function logIndividual(text) {
@@ -203,8 +212,8 @@ function createPopulation() {
 function select(population, generationalJump = 0.5) {
     const populationWithApt = _.map(population, (elem) => {
         const apt = calculateFitness(elem)
-        log(elem, bestFitness);
-        logIndividual({
+        log(elem, apt);
+        logSelect({
             m: elem.movementsMissionaries,
             c: elem.movementsCannibals, 
             eatenByCannibals: elem.eatenByCannibals,
@@ -223,8 +232,17 @@ function cross(population) {
     return population;
 }
 
+function mutateElement(gen) {
+    if (Math.random() < MUTATION_PROBABILITY) return Math.floor(Math.random() * 3);
+
+    return gen;
+}
+
 function mutate(population) {
-    return population;
+    return _.map(population, (elem) => ({
+        movementsMissionaries: _.map(elem.movementsMissionaries, (m) => mutateElement(m)),
+        movementsCannibals: _.map(elem.movementsCannibals, (c) => mutateElement(c)),
+    }));
 }
 
 /**
@@ -254,6 +272,11 @@ function main() {
         population = select(population, GENERATIONAL_JUMP);
 
         population = mutate(population);
+
+        population.forEach(elem => logIndividual({
+            m: elem.movementsMissionaries,
+            c: elem.movementsCannibals,
+        }));
 
         population = cross(population);
     }
