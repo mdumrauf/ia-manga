@@ -1,18 +1,28 @@
 const fs = require('fs');
 const logFileDate = new Date().toISOString().replace(/T/, ' ').replace(/:/g, '-').replace(/\..+/, '').replace(' ', '_');
 
+const LOG_ERRORS = false;
+const LOG_INFO = false;
+
+const INDIVIDUAL_SELECTION_RATE = 0.5;
+const NUMBERS_TO_MOVE_RATE = 0.4;
+
+CONST GENERATIONAL_JUMP = 0.5;
+
+
 function logInfo(text) {
     text.date = new Date().toISOString();
-    fs.appendFileSync(`${logFileDate}-info.log`, JSON.stringify(text) + ',\n');
+    LOG_INFO && fs.appendFileSync(`${logFileDate}-info.log`, JSON.stringify(text) + ',\n');
+}
+
+function logIndividual(text) {
+    fs.appendFileSync(`${logFileDate}-individual.log`, JSON.stringify(text) + ',\n');
 }
 
 function logError(text) {
     text.date = new Date().toISOString();
-    fs.appendFileSync(`${logFileDate}-error.log`, JSON.stringify(text) + ',\n');
+    LOG_ERRORS && fs.appendFileSync(`${logFileDate}-error.log`, JSON.stringify(text) + ',\n');
 }
-
-const INDIVIDUAL_SELECTION_RATE = 0.5;
-const NUMBERS_TO_MOVE_RATE = 0.4;
 
 /**
  * ERRORS
@@ -25,14 +35,14 @@ const NUMBERS_TO_MOVE_RATE = 0.4;
 
 function createPopulation() {
     const population = [];
-    const movementsMissionaries = [];
-    const movementsCannibals = [];
 
     for (let i = 0; i < 1000; i++) {
         const elem = {
             individualsRightBank: 0,
             numberOfMovements: 0,
             eatenByCannibals: 0,
+            movementsMissionaries: [],
+            movementsCannibals: [],
         };
 
         let boatPosition = 1; // 1: left-to-right, 0: right-to-left
@@ -69,6 +79,9 @@ function createPopulation() {
                                 // Move missionaries
                                 bankToDecrement.missionaries--;
                                 bankToIncrement.missionaries++;
+
+                                elem.movementsMissionaries.push(2);
+                                elem.movementsCannibals.push(0);
                             } else {
                                 logError({ error: 42,
                                     population, elem, boatPosition, bankLeft, bankRight});
@@ -85,6 +98,9 @@ function createPopulation() {
                                 // Move cannibals
                                 bankToDecrement.cannibals--;
                                 bankToIncrement.cannibals++;
+
+                                elem.movementsMissionaries.push(1);
+                                elem.movementsCannibals.push(1);
                             } else {
                                 logError({ error: 43,
                                     population, elem, boatPosition, bankLeft, bankRight});
@@ -96,6 +112,9 @@ function createPopulation() {
                             }
                             
                         }
+                    } else {
+                        elem.movementsMissionaries.push(1);
+                        elem.movementsCannibals.push(0);
                     }
                 } else {
                     logError({ error: 44,
@@ -118,6 +137,9 @@ function createPopulation() {
                                 // Move missionaries
                                 bankToDecrement.missionaries--;
                                 bankToIncrement.missionaries++;
+
+                                elem.movementsMissionaries.push(1);
+                                elem.movementsCannibals.push(1);
                             } else {
                                 logError({ error: 43,
                                     population, elem, boatPosition, bankLeft, bankRight});
@@ -134,6 +156,9 @@ function createPopulation() {
                                 // Move cannibals
                                 bankToDecrement.cannibals--;
                                 bankToIncrement.cannibals++;
+
+                                elem.movementsMissionaries.push(1);
+                                elem.movementsCannibals.push(1);
                             } else {
                                 logError({ error: 45,
                                     population, elem, boatPosition, bankLeft, bankRight});
@@ -145,6 +170,9 @@ function createPopulation() {
                                 boatPosition ^= 1;
                             }
                         }
+                    } else {
+                        elem.movementsMissionaries.push(0);
+                        elem.movementsCannibals.push(1);
                     }
                 } else {
                     logError({ error: 46,
@@ -172,8 +200,23 @@ function createPopulation() {
     return population;
 }
 
-function select(population) {
-    return population;
+function select(population, generationalJump = 0.5) {
+    const populationWithApt = _.map(population, (elem) => {
+        const apt = calculateFitness(elem)
+        log(elem, bestFitness);
+        logIndividual({
+            m: elem.movementsMissionaries,
+            c: elem.movementsCannibals, 
+            eatenByCannibals: elem.eatenByCannibals,
+            apt,
+        })
+        return { ...elem, apt };
+    });
+    const orderedPopulation = _.orderBy(populationWithApt, 'apt', 'desc');
+    
+    const elementsToTake = orderedPopulation.length * generationalJump;
+    
+    return _.take(orderedPopulation, elementsToTake)
 }
 
 function cross(population) {
@@ -189,7 +232,7 @@ function mutate(population) {
  * @param {Elem} elem individualsRightBank, numberOfMovements, eatenByCannibals (0, 1)
  * @returns 
  */
-function applyFitness(elem) {
+function calculateFitness(elem) {
     return 50 * elem.individualsRightBank - 10 * elem.numberOfMovements - 100 * elem.eatenByCannibals;
 }
 
@@ -199,23 +242,20 @@ function log(population, fitnessRate) {
 
 function main() {
 
+    let population = createPopulation();
+
     while (true/* criterio de paro */) {
 
-        const population = createPopulation();
+        //     if (elem.eatenByCannibals === 0) {
+        //         console.log('I WON, BITCHES!', elem);
+        //     }
+        // }
 
-        const selectedPopulation = select(population);
-        const mutatedPopulation = mutate(selectedPopulation);
-        // cross
+        population = select(population, GENERATIONAL_JUMP);
 
-        for (let i = 0; i < population.length; i++) {
-            const elem = population[i];
-            const bestFitness = applyFitness(elem);
-            log(elem, bestFitness);
+        population = mutate(population);
 
-            if (elem.eatenByCannibals === 0) {
-                console.log('I WON, BITCHES!', elem);
-            }
-        }
+        population = cross(population);
     }
 }
 
