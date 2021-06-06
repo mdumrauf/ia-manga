@@ -1,3 +1,4 @@
+const fs = require('fs');
 
 const population = {
     missionaries: 3,
@@ -10,6 +11,14 @@ const bankRight = {
     missionaries: 0,
     cannibals: 0,
 };
+
+function logInfo(text) {
+    fs.appendFileSync('info.log', text + '\n');
+}
+
+function logError(text) {
+    fs.appendFileSync('error.log', text + '\n');
+}
 
 function createPopulation() {
     const population = [];
@@ -56,7 +65,7 @@ function createPopulation() {
                                 bankToDecrement.missionaries--;
                                 bankToIncrement.missionaries++;
                             } else {
-                                console.log('Try to move 2, but there are no more missionaries to move. Continue to next round.');
+                                logError('Try to move 2, but there are no more missionaries to move. Continue to next round.');
                                 // Cancel the movement
                                 bankToDecrement.missionaries++;
                                 bankToIncrement.missionaries--;
@@ -71,7 +80,7 @@ function createPopulation() {
                                 bankToDecrement.cannibals--;
                                 bankToIncrement.cannibals++;
                             } else {
-                                console.log('Tried to move 1 cannibal with 1 missionary, but there are no cannibals to move. Continue to next round.');
+                                logError('Tried to move 1 cannibal with 1 missionary, but there are no cannibals to move. Continue to next round.');
                                 // Cancel the movement
                                 bankToDecrement.missionaries++;
                                 bankToIncrement.missionaries--;
@@ -82,7 +91,7 @@ function createPopulation() {
                         }
                     }
                 } else {
-                    console.log('Tried to move 1, but there are no missionaries to move. Continue to next round.');
+                    logError('Tried to move 1, but there are no missionaries to move. Continue to next round.');
                     // xor boatPosition to invalidate movement
                     boatPosition ^= 1;
                 }
@@ -102,7 +111,7 @@ function createPopulation() {
                                 bankToDecrement.missionaries--;
                                 bankToIncrement.missionaries++;
                             } else {
-                                console.log('Tried to move 1 cannibal with 1 missionary, but there are no cannibals to move. Continue to next round.');
+                                logError('Tried to move 1 cannibal with 1 missionary, but there are no cannibals to move. Continue to next round.');
                                 // Cancel the movement
                                 bankToDecrement.cannibals++;
                                 bankToIncrement.cannibals--;
@@ -117,7 +126,7 @@ function createPopulation() {
                                 bankToDecrement.cannibals--;
                                 bankToIncrement.cannibals++;
                             } else {
-                                console.log('Try to move 2, but there are no more cannibals to move. Continue to next round.');
+                                logError('Try to move 2, but there are no more cannibals to move. Continue to next round.');
                                 // Cancel the movement
                                 bankToDecrement.cannibals++;
                                 bankToIncrement.cannibals--;
@@ -128,7 +137,7 @@ function createPopulation() {
                         }
                     }
                 } else {
-                    console.log('Tried to move 1, but there are no cannibals to move. Continue to next round.');
+                    logError('Tried to move 1, but there are no cannibals to move. Continue to next round.');
                     // xor boatPosition to invalidate movement
                     boatPosition ^= 1;
                 }
@@ -174,7 +183,7 @@ function applyFitness(elem) {
 }
 
 function log(population, fitnessRate) {
-    console.log({population, fitnessRate});
+    logInfo(JSON.stringify({population, fitnessRate}));
 }
 
 function main() {
