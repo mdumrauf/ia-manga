@@ -41,8 +41,8 @@ NODE_OPTIONS="--max-old-space-size=8192" node # Aumentar el heap size
 
 > const fs = require('fs');
 > const arr = require('./1')
-> fs.appendFileSync('1.csv', 'apt,\n')
-> for (let i = 0; i < foo.length; i++) fs.appendFileSync('1.csv', `${arr[i].apt}\n`)
+> fs.appendFileSync('1.csv', 'individuals,apt,\n')
+> for (let i = 0; i < arr.length; i++) fs.appendFileSync('1.csv', `${arr[i].individualsRightBank},${arr[i].apt}\n`)
 >
 (To exit, press ^C again or type .exit)
 >
