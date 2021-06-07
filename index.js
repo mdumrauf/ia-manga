@@ -1,6 +1,8 @@
 const fs = require('fs');
 const _ = require('lodash');
 
+const Board = require('./entities/board');
+
 const logFileDate = new Date().toISOString().replace(/T/, ' ').replace(/:/g, '-').replace(/\..+/, '').replace(' ', '_');
 
 const LOG_ERRORS = false;
@@ -9,7 +11,7 @@ const LOG_INFO = false;
 const INDIVIDUAL_SELECTION_RATE = 0.5;
 const NUMBERS_TO_MOVE_RATE = 0.4;
 
-const GENERATIONAL_JUMP = 0.5;
+const GENERATIONAL_JUMP = 0.95;
 
 const MUTATION_PROBABILITY = 0.05;
 
@@ -24,8 +26,12 @@ function logSelect(text) {
     fs.appendFileSync(`${logFileDate}-select.log`, JSON.stringify(text) + ',\n');
 }
 
-function logIndividual(text) {
-    fs.appendFileSync(`${logFileDate}-individual.log`, JSON.stringify(text) + ',\n');
+function logMutate(text) {
+    fs.appendFileSync(`${logFileDate}-mutate.log`, JSON.stringify(text) + ',\n');
+}
+
+function logCross(text) {
+    fs.appendFileSync(`${logFileDate}-cross.log`, JSON.stringify(text) + ',\n');
 }
 
 function logError(text) {
@@ -45,7 +51,7 @@ function logError(text) {
 function createPopulation() {
     const population = [];
 
-    for (let i = 0; i < 1000; i++) {
+    for (let i = 0; i < 100000; i++) {
         const elem = {
             individualsRightBank: 0,
             numberOfMovements: 0,
@@ -209,27 +215,62 @@ function createPopulation() {
     return population;
 }
 
-function select(population, generationalJump = 0.5) {
+function select(population, generationalJump = 0.95) {
     const populationWithApt = _.map(population, (elem) => {
-        const apt = calculateFitness(elem)
-        log(elem, apt);
+        const fitness = calculateFitness(elem)
+
+        log(elem, fitness.apt);
         logSelect({
             m: elem.movementsMissionaries,
             c: elem.movementsCannibals, 
-            eatenByCannibals: elem.eatenByCannibals,
-            apt,
+            eatenByCannibals: fitness.eatenByCannibals,
+            apt: fitness.apt,
         })
-        return { ...elem, apt };
+        return { ...elem, apt: fitness.apt, eatenByCannibals: fitness.eatenByCannibals };
     });
     const orderedPopulation = _.orderBy(populationWithApt, 'apt', 'desc');
     
-    const elementsToTake = orderedPopulation.length * generationalJump;
+    const elementsToTake = Math.floor(orderedPopulation.length * generationalJump);
     
     return _.take(orderedPopulation, elementsToTake)
 }
 
 function cross(population) {
-    return population;
+    const chunks = _.chunk(population, 2);
+    const mappedChunkes = _.map(chunks, (chk) => {
+
+        // Return same element for last chunk on odd arrays.
+        if (chk.length !== 2) return chk;
+
+        const elementsToTakeParentM1 = Math.floor(chk[0].movementsMissionaries.length * 0.5);
+        const leftParentM1 = _.take(chk[0].movementsMissionaries, elementsToTakeParentM1);
+        const rightParentM1 = _.takeRight(chk[0].movementsMissionaries, chk[0].movementsMissionaries.length - elementsToTakeParentM1);
+
+        const elementsToTakeParentM2 = Math.floor(chk[1].movementsMissionaries.length * 0.5);
+        const leftParentM2 = _.take(chk[1].movementsMissionaries, elementsToTakeParentM2);
+        const rightParentM2 = _.takeRight(chk[1].movementsMissionaries, chk[1].movementsMissionaries.length - elementsToTakeParentM2);
+
+        
+        const childM1 = [ ...leftParentM1, ...rightParentM2 ];
+        const childM2 = [ ...leftParentM2, ...rightParentM1 ];
+
+
+        const elementsToTakeParentC1 = Math.floor(chk[0].movementsCannibals.length * 0.5);
+        const leftParentC1 = _.take(chk[0].movementsCannibals, elementsToTakeParentC1);
+        const rightParentC1 = _.takeRight(chk[0].movementsCannibals, chk[0].movementsCannibals.length - elementsToTakeParentC1);
+
+        const elementsToTakeParentC2 = Math.floor(chk[1].movementsCannibals.length * 0.5);
+        const leftParentC2 = _.take(chk[1].movementsCannibals, elementsToTakeParentC2);
+        const rightParentC2 = _.takeRight(chk[1].movementsCannibals, chk[1].movementsCannibals.length - elementsToTakeParentC2);
+
+        
+        const childC1 = [ ...leftParentC1, ...rightParentC2 ];
+        const childC2 = [ ...leftParentC2, ...rightParentC1 ];
+
+        
+        return [{ movementsMissionaries: childM1, movementsCannibals: childC1 }, { movementsMissionaries: childM2, movementsCannibals: childC2 }];
+    });
+    return _.flatten(mappedChunkes);
 }
 
 function mutateElement(gen) {
@@ -251,7 +292,11 @@ function mutate(population) {
  * @returns 
  */
 function calculateFitness(elem) {
-    return 50 * elem.individualsRightBank - 10 * elem.numberOfMovements - 100 * elem.eatenByCannibals;
+    const board = new Board();
+
+    const { individualsRightBank, numberOfMovements, eatenByCannibals } = board.calculateFitness(elem.movementsMissionaries, elem.movementsCannibals);
+
+    return { apt: 50 * individualsRightBank - 10 * numberOfMovements - 100 * eatenByCannibals, eatenByCannibals };
 }
 
 function log(population, fitnessRate) {
@@ -261,8 +306,9 @@ function log(population, fitnessRate) {
 function main() {
 
     let population = createPopulation();
+    let iteration = 1;
 
-    while (true/* criterio de paro */) {
+    while (population.length > 0) {
 
         //     if (elem.eatenByCannibals === 0) {
         //         console.log('I WON, BITCHES!', elem);
@@ -273,13 +319,24 @@ function main() {
 
         population = mutate(population);
 
-        population.forEach(elem => logIndividual({
-            m: elem.movementsMissionaries,
-            c: elem.movementsCannibals,
+        population.forEach(elem1 => logMutate({
+            m: elem1.movementsMissionaries,
+            c: elem1.movementsCannibals,
         }));
 
         population = cross(population);
+
+        population.forEach(elem2 => logCross({
+            m: elem2.movementsMissionaries,
+            c: elem2.movementsCannibals,
+        }));
+
+        ++iteration;
+
+        console.log(`Iteration: ${iteration} with length: ${population.length}`);
     }
+
+    console.log('Chau guachin');
 }
 
 main();
