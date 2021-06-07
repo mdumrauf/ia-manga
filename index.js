@@ -11,10 +11,11 @@ const LOG_INFO = false;
 const INDIVIDUAL_SELECTION_RATE = 0.5;
 const NUMBERS_TO_MOVE_RATE = 0.4;
 
-const GENERATIONAL_JUMP = 0.95;
+const GENERATIONAL_JUMP = 0.75;
 
-const MUTATION_PROBABILITY = 0.05;
+const MUTATION_PROBABILITY = 0.1;
 
+const INITIAL_POPULATION_SIZE = 1000000;
 
 
 function logInfo(text) {
@@ -51,7 +52,7 @@ function logError(text) {
 function createPopulation() {
     const population = [];
 
-    for (let i = 0; i < 100000; i++) {
+    for (let i = 0; i < INITIAL_POPULATION_SIZE; i++) {
         const elem = {
             individualsRightBank: 0,
             numberOfMovements: 0,
@@ -225,6 +226,7 @@ function select(population, generationalJump = 0.95) {
             c: elem.movementsCannibals, 
             eatenByCannibals: fitness.eatenByCannibals,
             apt: fitness.apt,
+            individualsRightBank: fitness.individualsRightBank,
         })
         return { ...elem, apt: fitness.apt, eatenByCannibals: fitness.eatenByCannibals };
     });
@@ -287,16 +289,17 @@ function mutate(population) {
 }
 
 /**
- * 
+ * Calculates the fitness of a given element.
+ *
  * @param {Elem} elem individualsRightBank, numberOfMovements, eatenByCannibals (0, 1)
- * @returns 
+ * @returns { apt, eatenByCannibals, individualsRightBank }
  */
 function calculateFitness(elem) {
     const board = new Board();
 
     const { individualsRightBank, numberOfMovements, eatenByCannibals } = board.calculateFitness(elem.movementsMissionaries, elem.movementsCannibals);
 
-    return { apt: 50 * individualsRightBank - 10 * numberOfMovements - 100 * eatenByCannibals, eatenByCannibals };
+    return { apt: 50 * individualsRightBank - 10 * numberOfMovements - 100 * eatenByCannibals, eatenByCannibals, individualsRightBank };
 }
 
 function log(population, fitnessRate) {
@@ -309,12 +312,6 @@ function main() {
     let iteration = 1;
 
     while (population.length > 0) {
-
-        //     if (elem.eatenByCannibals === 0) {
-        //         console.log('I WON, BITCHES!', elem);
-        //     }
-        // }
-
         population = select(population, GENERATIONAL_JUMP);
 
         population = mutate(population);
