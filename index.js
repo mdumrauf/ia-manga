@@ -333,7 +333,7 @@ function main() {
         console.log(`Iteration: ${iteration} with length: ${population.length}`);
     }
 
-    console.log('Chau guachin');
+    console.log('Finished!');
 }
 
 main();
